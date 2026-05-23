@@ -296,6 +296,31 @@ body.lang-zh .cc-roma  { font-size:.62rem; color:var(--tx3); opacity:.5; }
   .lang-btn{font-size:.68rem;padding:4px 11px;}
 }
 </style>
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDogsKNfIDXOzW5bV9ii_7grTK356jtq8M",
+      authDomain: "lang-learning-app-4b56c.firebaseapp.com",
+      databaseURL: "https://lang-learning-app-4b56c-default-rtdb.firebaseio.com",
+      projectId: "lang-learning-app-4b56c",
+      storageBucket: "lang-learning-app-4b56c.firebasestorage.app",
+      messagingSenderId: "43159289543",
+      appId: "1:43159289543:web:f59df5b6d75ff2ed3288e2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
+
+    window._fbDb  = db;
+    window._fbRef = ref;
+    window._fbGet = get;
+    window._fbSet = set;
+    window._fbReady = true;
+    window.dispatchEvent(new Event('fbReady'));
+  </script>
 </head>
 <body class="lang-ja">
 
@@ -369,6 +394,16 @@ body.lang-zh .cc-roma  { font-size:.62rem; color:var(--tx3); opacity:.5; }
 
   <!-- ==================== SPEAKING PANEL ==================== -->
   <div class="panel active" id="p-speak">
+
+  <!-- ニックネーム（Firebase連携用） -->
+  <div id="nickBar" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:10px 14px;background:var(--bg2,#1e2433);border:1px solid var(--bd2,#2e3650);border-radius:10px;">
+    <span style="font-size:.8rem;color:var(--tx2);white-space:nowrap">👤 ニックネーム：</span>
+    <input id="nickNameInput" type="text" maxlength="20" placeholder="例: 山田 / 阿玲"
+      style="flex:1;background:var(--bg3,#252d40);border:1px solid var(--bd2,#2e3650);border-radius:6px;padding:6px 10px;color:var(--tx);font-size:.88rem;font-family:inherit;outline:none;"
+      oninput="window._nickName=this.value.trim();localStorage.setItem('spk_nick',this.value.trim())" />
+    <span id="nickSaved" style="font-size:.75rem;color:var(--grn,#4caf92);min-width:40px"></span>
+  </div>
+
     <div class="day-tabs" id="dayTabs"></div>
     <div class="task-card" id="taskCard"></div>
     <div class="spk-ctrl">
@@ -2393,6 +2428,9 @@ const UI = {
     recOnLbl:   '録音中...',
     noRecog:    '（認識できませんでした）',
     unSupport:  '⚠️ 音声認識非対応のブラウザです',
+    nickLabel:  '👤 ニックネーム：',
+    nickPlaceholder: '例: 山田 / 阿玲',
+    nickSavedMsg: '✅ 保存',
   },
   zh: {
     navSpeak:   '🎤 口說練習',
@@ -2436,6 +2474,9 @@ const UI = {
     recOnLbl:   '錄音中...',
     noRecog:    '（未能辨識）',
     unSupport:  '⚠️ 此瀏覽器不支援語音辨識',
+    nickLabel:  '👤 暱稱：',
+    nickPlaceholder: '例如: 山田 / 阿玲',
+    nickSavedMsg: '✅ 已儲存',
   }
 };
 
@@ -2527,6 +2568,12 @@ function setLang(lang) {
   // Re-render vocab grid (label order changes)
   const vg = document.getElementById('vgrid');
   if (vg) { vg.innerHTML = ''; buildVocabGrid(); }
+
+  // ニックネームバーのラベル切替
+  const nickLbl = document.querySelector('#nickBar span');
+  if (nickLbl) nickLbl.textContent = t.nickLabel;
+  const nickInp = document.getElementById('nickNameInput');
+  if (nickInp) nickInp.placeholder = t.nickPlaceholder;
 
   showToast(t.toastSet);
 }
@@ -3046,6 +3093,9 @@ function scoreIt(txt) {
 
   renderHistory();
   document.getElementById('scoreWrap').scrollIntoView({behavior:'smooth',block:'nearest'});
+
+  // ── Firebase に送信（DAYごとの最高点を保存）──────────────
+  saveScoreToFirebase(curLevel, curDay, task.title, total, spkLang);
 }
 
 function buildFeedback(g,kw,fl,pr,hits,kws,total) {
@@ -3374,6 +3424,66 @@ if ('speechSynthesis' in window) {
     window.speechSynthesis.getVoices(); // cache the list
   };
 }
+
+
+// ═══════════════════════════════════════════════════════════
+//  Firebase 得点保存
+// ═══════════════════════════════════════════════════════════
+window._nickName = localStorage.getItem('spk_nick') || '';
+
+function showNickMsg(msg, color) {
+  const el = document.getElementById('nickSaved');
+  if (el) { el.textContent = msg; el.style.color = color || ''; setTimeout(() => { el.textContent = ''; }, 4000); }
+}
+
+function saveScoreToFirebase(level, day, title, score, lang) {
+  const nick = window._nickName;
+  if (!nick) { showNickMsg('⚠️ ニックネームを入力してください', 'orange'); return; }
+
+  const doSave = () => {
+    const db  = window._fbDb;
+    const ref = window._fbRef;
+    const get = window._fbGet;
+    const set = window._fbSet;
+    if (!db) { showNickMsg('⚠️ Firebase未接続', 'orange'); return; }
+
+    showNickMsg('送信中...', '');
+
+    const key     = `scores/${nick.replace(/[.#$[\]]/g,'_')}`;
+    const dayKey  = `${level}_day${day}`;
+    const nodeRef = ref(db, key);
+
+    get(nodeRef).then(snap => {
+      const data = snap.val() || { nick, days: {}, updatedAt: 0 };
+      const prev = (data.days[dayKey] && data.days[dayKey].best) || 0;
+      if (score > prev) {
+        data.days[dayKey] = { best: score, title, level, day, lang, updatedAt: Date.now() };
+        data.nick      = nick;
+        data.updatedAt = Date.now();
+        set(nodeRef, data)
+          .then(() => { showNickMsg('✅ 保存しました！', ''); })
+          .catch(err => { showNickMsg('❌ 保存失敗: ' + (err.code||err.message), 'red'); console.error('Firebase set error:', err); });
+      } else {
+        showNickMsg('（最高記録は ' + prev + '点です）', '');
+      }
+    }).catch(err => { showNickMsg('❌ 読込失敗: ' + (err.code||err.message), 'red'); console.error('Firebase get error:', err); });
+  };
+
+  if (window._fbReady) {
+    doSave();
+  } else {
+    window.addEventListener('fbReady', doSave, { once: true });
+  }
+}
+// ページ読み込み時にニックネームを復元
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('spk_nick');
+  if (saved) {
+    window._nickName = saved;
+    const inp = document.getElementById('nickNameInput');
+    if (inp) inp.value = saved;
+  }
+});
 </script>
 </body>
 </html>

@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏆 語言学習ランキング／排行榜</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Bebas+Neue&display=swap');
+  :root {
+    --gold:#f5c842;--silver:#c0c8d8;--bronze:#e08850;
+    --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;
+    --accent:#58a6ff;--green:#3fb950;--red:#f85149;
+    --tx:#e6edf3;--tx2:#8b949e;--border:#30363d;--radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;padding:20px 16px 60px;max-width:680px;margin:0 auto}
+  .header{text-align:center;margin-bottom:24px}
+  .header h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.4rem,9vw,4rem);letter-spacing:.08em;color:var(--gold);text-shadow:0 0 30px rgba(245,200,66,.4);line-height:1}
+  .header p{font-size:.8rem;color:var(--tx2);margin-top:4px;line-height:1.6}
+  .tabs{display:flex;gap:6px;margin-bottom:18px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:5px}
+  .tab{flex:1;background:none;border:none;border-radius:8px;padding:8px 4px;color:var(--tx2);font-family:inherit;font-size:.78rem;cursor:pointer;transition:background .15s,color .15s;line-height:1.4;text-align:center}
+  .tab.active{background:var(--bg3);color:var(--tx);font-weight:700}
+  .filter-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .filter-btn{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;color:var(--tx2);font-family:inherit;font-size:.76rem;cursor:pointer;transition:all .15s}
+  .filter-btn.active{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700}
+  .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
+  .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center}
+  .stat-val{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--gold)}
+  .stat-label{font-size:.68rem;color:var(--tx2);margin-top:2px;line-height:1.5}
+  .ranking-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .ranking-title{font-size:.76rem;color:var(--tx2);line-height:1.5}
+  .refresh-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--tx2);padding:5px 10px;font-size:.72rem;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+  .refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .ranking-list{display:flex;flex-direction:column;gap:8px}
+  .rank-item{background:var(--bg2);border:1px solid var(--border);border-radius:10px;position:relative;overflow:hidden;animation:slideIn .3s ease both}
+  .rank-item.top1{border-color:var(--gold)}.rank-item.top2{border-color:var(--silver)}.rank-item.top3{border-color:var(--bronze)}
+  @keyframes slideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .rank-main{display:flex;align-items:center;gap:10px;padding:12px 14px}
+  .rank-num{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;min-width:32px;text-align:center;color:var(--tx2)}
+  .rank-num.gold{color:var(--gold);text-shadow:0 0 14px rgba(245,200,66,.5)}
+  .rank-num.silver{color:var(--silver)}.rank-num.bronze{color:var(--bronze)}
+  .rank-medal{font-size:1.3rem;min-width:26px;text-align:center}
+  .rank-info{flex:1;overflow:hidden}
+  .rank-name{font-weight:700;font-size:.93rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rank-sub{font-size:.68rem;color:var(--tx2);margin-top:2px;line-height:1.5}
+  .rank-score-wrap{text-align:right;min-width:72px}
+  .rank-score{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.04em;color:var(--gold);line-height:1}
+  .rank-score-label{font-size:.64rem;color:var(--tx2);margin-top:2px;line-height:1.5}
+  .bar-wrap{position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--bg3)}
+  .bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--gold));transition:width .6s ease}
+  .expand-wrap{padding:0 14px 10px}
+  .expand-btn{background:none;border:none;color:var(--tx2);font-size:.7rem;cursor:pointer;padding:2px 0;font-family:inherit}
+  .expand-btn:hover{color:var(--tx)}
+  .day-detail{display:none;margin-top:6px;padding:8px 10px;background:var(--bg3);border-radius:8px;font-size:.75rem}
+  .day-detail.open{display:block}
+  .day-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border)}
+  .day-row:last-child{border-bottom:none}
+  .day-title{color:var(--tx2);flex:1;padding-right:8px;line-height:1.5}
+  .day-score{color:var(--gold);font-weight:700;white-space:nowrap}
+  .empty{text-align:center;padding:50px 20px;color:var(--tx2)}
+  .empty .icon{font-size:3rem;margin-bottom:14px}
+  .empty p{font-size:.85rem;line-height:1.8}
+  .loading{text-align:center;padding:40px;color:var(--tx2);font-size:.85rem}
+  .spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* 管理 */
+  .admin-area{margin-top:32px;border-top:1px solid var(--border);padding-top:18px}
+  .admin-toggle{background:none;border:none;color:var(--tx2);font-size:.76rem;cursor:pointer;font-family:inherit}
+  .admin-toggle:hover{color:var(--tx)}
+  .admin-panel{display:none;margin-top:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+  .admin-panel.open{display:block}
+  .admin-section{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+  .admin-section:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+  .admin-section h3{font-size:.74rem;color:var(--tx2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;line-height:1.6}
+  .input-row{display:flex;gap:8px;margin-bottom:6px}
+  .field{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--tx);font-size:.88rem;font-family:inherit;outline:none}
+  .field:focus{border-color:var(--accent)}
+  .field-label{font-size:.74rem;color:var(--tx2);margin-bottom:4px;display:block}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .btn{border:none;border-radius:8px;padding:9px 14px;font-size:.82rem;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;transition:opacity .15s}
+  .btn:hover{opacity:.85}
+  .btn-accent{background:var(--accent);color:#000}
+  .btn-green{background:var(--green);color:#000}
+  .btn-danger{background:var(--red);color:#fff}
+  .btn-ghost{background:var(--bg3);border:1px solid var(--border);color:var(--tx)}
+  .msg{font-size:.76rem;margin-top:6px;min-height:1.2em}
+  .msg-err{color:var(--red)}.msg-ok{color:var(--green)}
+  .csv-preview{margin-top:8px;background:var(--bg3);border-radius:8px;padding:10px 12px;font-size:.7rem;color:var(--tx2);max-height:140px;overflow-y:auto;font-family:monospace;white-space:pre;display:none}
+  .csv-preview.open{display:block}
+  .notice{font-size:.72rem;color:var(--tx2);line-height:1.6;padding:8px 10px;background:var(--bg3);border-radius:8px;margin-bottom:10px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:10px 20px;font-size:.82rem;color:var(--tx);box-shadow:0 4px 20px rgba(0,0,0,.5);transition:transform .3s ease;pointer-events:none;white-space:nowrap;z-index:999}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏆 RANKING</h1>
+  <p>日中語言学習ランキング<br>日中語言學習排行榜</p>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('total')">📊 累計得点<br><span style="font-size:.72em;color:var(--tx2)">累計分數</span></button>
+  <button class="tab" onclick="switchTab('avg')">📈 平均得点<br><span style="font-size:.72em;color:var(--tx2)">平均分數</span></button>
+  <button class="tab" onclick="switchTab('days')">📅 DAY別<br><span style="font-size:.72em;color:var(--tx2)">各日排名</span></button>
+</div>
+
+<div class="filter-row">
+  <button class="filter-btn active" onclick="setFilter('all')">全レベル／全級別</button>
+  <button class="filter-btn" onclick="setFilter('beg')">🌱 初級</button>
+  <button class="filter-btn" onclick="setFilter('int')">📘 中級</button>
+  <button class="filter-btn" onclick="setFilter('adv')">🎓 上級</button>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card"><div class="stat-val" id="statParticipants">-</div><div class="stat-label">参加者数<br>參加人數</div></div>
+  <div class="stat-card"><div class="stat-val" id="statTopScore">-</div><div class="stat-label">最高累計点<br>最高累計分</div></div>
+  <div class="stat-card"><div class="stat-val" id="statTopAvg">-</div><div class="stat-label">最高平均点<br>最高平均分</div></div>
+</div>
+
+<div class="ranking-header">
+  <div class="ranking-title" id="rankingTitle">🏅 累計得点ランキング<br>累計分數排行榜</div>
+  <button class="refresh-btn" onclick="loadRanking()">↻ 更新／刷新</button>
+</div>
+<div id="rankingList" class="ranking-list">
+  <div class="loading"><span class="spinner"></span>読み込み中... / 載入中...</div>
+</div>
+
+<!-- 管理エリア -->
+<div class="admin-area">
+  <button class="admin-toggle" onclick="document.getElementById('adminPanel').classList.toggle('open')">
+    ⚙️ 管理者メニュー／管理者選單
+  </button>
+  <div class="admin-panel" id="adminPanel">
+
+    <!-- ログイン画面 -->
+    <div id="loginSection">
+      <div class="admin-section">
+        <h3>🔐 管理者ログイン／管理者登入</h3>
+        <div class="notice">
+          パスワードはFirebaseに安全に保存されています。<br>
+          密碼已安全地儲存於Firebase。<br>
+          初回のみ：パスワードが未設定の場合は任意のパスワードを入力してそのまま登録できます。<br>
+          首次使用：若尚未設定密碼，輸入任意密碼即可直接登錄。
+        </div>
+        <label class="field-label">パスワード／密碼</label>
+        <div class="input-row">
+          <input class="field" id="pwInput" type="password" placeholder="パスワード／密碼"
+            onkeydown="if(event.key==='Enter')adminAuth()" />
+          <button class="btn btn-accent" onclick="adminAuth()">ログイン／登入</button>
+        </div>
+        <div class="msg msg-err" id="loginMsg"></div>
+      </div>
+    </div>
+
+    <!-- 管理メニュー（認証後） -->
+    <div id="adminMenu" style="display:none">
+
+      <!-- CSVエクスポート -->
+      <div class="admin-section">
+        <h3>📥 CSVエクスポート／匯出CSV</h3>
+        <div class="btn-row">
+          <button class="btn btn-green" onclick="exportCSV('all')">全データ出力<br>全部資料</button>
+          <button class="btn btn-ghost" onclick="exportCSV('beg')">🌱 初級</button>
+          <button class="btn btn-ghost" onclick="exportCSV('int')">📘 中級</button>
+          <button class="btn btn-ghost" onclick="exportCSV('adv')">🎓 上級</button>
+        </div>
+        <div class="csv-preview" id="csvPreview"></div>
+      </div>
+
+      <!-- パスワード変更 -->
+      <div class="admin-section">
+        <h3>🔑 パスワード変更／變更密碼</h3>
+        <label class="field-label">新しいパスワード／新密碼</label>
+        <div class="input-row">
+          <input class="field" id="newPw1" type="password" placeholder="新パスワード／新密碼" />
+        </div>
+        <label class="field-label">確認（もう一度）／確認（再輸入）</label>
+        <div class="input-row">
+          <input class="field" id="newPw2" type="password" placeholder="再入力／再次輸入" />
+          <button class="btn btn-accent" onclick="changePassword()">変更／更改</button>
+        </div>
+        <div class="msg" id="pwChangeMsg"></div>
+      </div>
+
+      <!-- データ削除 -->
+      <div class="admin-section">
+        <h3>🗑️ データ削除／刪除資料</h3>
+        <div class="btn-row">
+          <button class="btn btn-danger" onclick="adminReset()">全データ削除／刪除全部資料</button>
+          <button class="btn btn-ghost" onclick="adminLogout()">ログアウト／登出</button>
+        </div>
+        <div class="msg" id="deleteMsg"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK (module) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, get, set, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  const cfg = {
+    apiKey:"AIzaSyDogsKNfIDXOzW5bV9ii_7grTK356jtq8M",
+    authDomain:"lang-learning-app-4b56c.firebaseapp.com",
+    databaseURL:"https://lang-learning-app-4b56c-default-rtdb.firebaseio.com",
+    projectId:"lang-learning-app-4b56c",
+    storageBucket:"lang-learning-app-4b56c.firebasestorage.app",
+    messagingSenderId:"43159289543",
+    appId:"1:43159289543:web:f59df5b6d75ff2ed3288e2"
+  };
+  const app = initializeApp(cfg);
+  const db  = getDatabase(app);
+  window._fb = { db, ref, get, set, remove };
+  window._fbReady = true;
+  window.dispatchEvent(new Event('fbReady'));
+</script>
+
+<script>
+// ── パスワードはFirebaseに保存 ────────────────────────────
+// ソースコードにパスワードは含みません
+// Firebase: admin/pw にハッシュ化して保存
+
+const PW_PATH   = 'admin/pw';   // Firebaseのパスワード保存パス
+let curTab      = 'total';
+let curFilter   = 'all';
+let allData     = {};
+let isAuthed    = false;
+
+const LV = { beg:'🌱 初級', int:'📘 中級', adv:'🎓 上級' };
+const TITLES = {
+  total: '🏅 累計得点ランキング<br><span style="font-size:.88em;color:var(--tx2)">累計分數排行榜</span>',
+  avg:   '📈 平均得点ランキング<br><span style="font-size:.88em;color:var(--tx2)">平均分數排行榜</span>',
+  days:  '📅 DAY別ランキング<br><span style="font-size:.88em;color:var(--tx2)">各日排名</span>'
+};
+
+// ── 初期化 ────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  if (window._fbReady) loadRanking();
+  else window.addEventListener('fbReady', loadRanking, { once: true });
+  setInterval(loadRanking, 20000);
+});
+
+function fb() {
+  if (!window._fb) throw new Error('Firebase未初期化');
+  return window._fb;
+}
+
+// ── パスワードのハッシュ化（SHA-256） ─────────────────────
+async function hashPw(pw) {
+  const buf = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(pw)
+  );
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ── データ取得 ────────────────────────────────────────────
+async function loadRanking() {
+  try {
+    const { db, ref, get } = fb();
+    const snap = await get(ref(db, 'scores'));
+    allData = snap.val() || {};
+    render();
+  } catch(e) {
+    document.getElementById('rankingList').innerHTML =
+      '<div class="empty"><p>読み込みエラー<br>載入錯誤，請稍後再試</p></div>';
+  }
+}
+
+// ── 管理者ログイン ────────────────────────────────────────
+async function adminAuth() {
+  const pw  = document.getElementById('pwInput').value.trim();
+  const msg = document.getElementById('loginMsg');
+  if (!pw) { setMsg(msg, '❌ パスワードを入力してください／請輸入密碼', 'err'); return; }
+
+  try {
+    const { db, ref, get, set } = fb();
+    const snap = await get(ref(db, PW_PATH));
+    const stored = snap.val();
+
+    if (!stored) {
+      // 未設定 → 初回登録
+      if (!confirm(`パスワード「${pw}」を管理者パスワードとして登録します。よろしいですか？\n確定要將「${pw}」設定為管理者密碼嗎？`)) return;
+      const hash = await hashPw(pw);
+      await set(ref(db, PW_PATH), hash);
+      loginSuccess();
+    } else {
+      // 照合
+      const hash = await hashPw(pw);
+      if (hash === stored) {
+        loginSuccess();
+      } else {
+        setMsg(msg, '❌ パスワードが違います／密碼錯誤', 'err');
+        document.getElementById('pwInput').value = '';
+      }
+    }
+  } catch(e) {
+    setMsg(msg, '❌ エラー: ' + (e.code || e.message), 'err');
+    console.error(e);
+  }
+}
+
+function loginSuccess() {
+  isAuthed = true;
+  document.getElementById('loginSection').style.display = 'none';
+  document.getElementById('adminMenu').style.display    = 'block';
+  document.getElementById('loginMsg').textContent = '';
+}
+
+function adminLogout() {
+  isAuthed = false;
+  document.getElementById('loginSection').style.display = 'block';
+  document.getElementById('adminMenu').style.display    = 'none';
+  document.getElementById('pwInput').value    = '';
+  document.getElementById('loginMsg').textContent = '';
+  document.getElementById('adminPanel').classList.remove('open');
+}
+
+// ── パスワード変更 ─────────────────────────────────────────
+async function changePassword() {
+  if (!isAuthed) return;
+  const pw1 = document.getElementById('newPw1').value.trim();
+  const pw2 = document.getElementById('newPw2').value.trim();
+  const msg = document.getElementById('pwChangeMsg');
+
+  if (!pw1) { setMsg(msg, '❌ 新しいパスワードを入力してください', 'err'); return; }
+  if (pw1.length < 4) { setMsg(msg, '❌ 4文字以上で設定してください', 'err'); return; }
+  if (pw1 !== pw2) { setMsg(msg, '❌ パスワードが一致しません／密碼不一致', 'err'); return; }
+
+  try {
+    const { db, ref, set } = fb();
+    const hash = await hashPw(pw1);
+    await set(ref(db, PW_PATH), hash);
+    setMsg(msg, '✅ パスワードを変更しました／密碼已變更', 'ok');
+    document.getElementById('newPw1').value = '';
+    document.getElementById('newPw2').value = '';
+    showToast('パスワードを変更しました／密碼已變更');
+  } catch(e) {
+    setMsg(msg, '❌ 変更失敗: ' + (e.code || e.message), 'err');
+    console.error(e);
+  }
+}
+
+// ── CSVエクスポート ───────────────────────────────────────
+function exportCSV(levelFilter) {
+  if (!isAuthed) return;
+  const rows = [['ニックネーム','レベル','DAY番号','タイトル','最高得点','言語','最終更新日時']];
+  Object.values(allData).forEach(userData => {
+    const nick = userData.nick || '不明';
+    Object.values(userData.days || {}).forEach(d => {
+      if (levelFilter !== 'all' && d.level !== levelFilter) return;
+      const lvName = {beg:'初級',int:'中級',adv:'上級'}[d.level] || d.level;
+      const lang   = d.lang === 'ja' ? '日本語' : d.lang === 'zh' ? '中文' : d.lang || '';
+      const date   = d.updatedAt ? new Date(d.updatedAt).toLocaleString('ja-JP') : '';
+      rows.push([nick, lvName, `Day${(d.day||0)+1}`, d.title||'', d.best||0, lang, date]);
+    });
+  });
+  if (rows.length <= 1) { showToast('エクスポートするデータがありません'); return; }
+
+  const csv = rows.map(r =>
+    r.map(c => { const s = String(c); return (s.includes(',')||s.includes('\n')||s.includes('"')) ? `"${s.replace(/"/g,'""')}"` : s; }).join(',')
+  ).join('\n');
+
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const lbl  = levelFilter === 'all' ? '全レベル' : {beg:'初級',int:'中級',adv:'上級'}[levelFilter];
+  const dt   = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  a.href = url; a.download = `ranking_${lbl}_${dt}.csv`; a.click();
+  URL.revokeObjectURL(url);
+
+  const prev = document.getElementById('csvPreview');
+  prev.textContent = rows.slice(0, 6).map(r => r.join(', ')).join('\n');
+  if (rows.length > 6) prev.textContent += `\n... 他 ${rows.length-6} 行`;
+  prev.classList.add('open');
+  showToast(`CSV出力完了 (${rows.length-1}件) ／ CSV匯出完成`);
+}
+
+// ── 全データ削除 ─────────────────────────────────────────
+async function adminReset() {
+  if (!isAuthed) return;
+  const msg = document.getElementById('deleteMsg');
+  if (!confirm('全参加者のデータを削除します。この操作は取り消せません。\n確定要刪除所有參加者的資料嗎？此操作無法復原。')) return;
+  try {
+    const { db, ref, remove } = fb();
+    await remove(ref(db, 'scores'));
+    allData = {}; render();
+    setMsg(msg, '✅ 削除完了 / 刪除完成', 'ok');
+    showToast('全データを削除しました／已刪除全部資料');
+    setTimeout(() => { msg.textContent = ''; adminLogout(); }, 2000);
+  } catch(e) {
+    setMsg(msg, '❌ 削除失敗: ' + (e.code || e.message), 'err');
+    console.error(e);
+  }
+}
+
+// ── レンダリング ──────────────────────────────────────────
+function calcStats(userData) {
+  const entries = Object.values(userData.days || {})
+    .filter(d => curFilter === 'all' || d.level === curFilter);
+  if (!entries.length) return { total:0, avg:0, count:0 };
+  const total = entries.reduce((s, d) => s + d.best, 0);
+  return { total, avg: Math.round(total / entries.length), count: entries.length };
+}
+
+function render() {
+  if (curTab === 'days') { renderDayRanking(); return; }
+  const users = Object.entries(allData)
+    .map(([k, d]) => ({ nick: d.nick||k, stats: calcStats(d), data: d }))
+    .filter(u => u.stats.count > 0);
+
+  document.getElementById('statParticipants').textContent = users.length || '-';
+  document.getElementById('statTopScore').textContent = users.length ? Math.max(...users.map(u=>u.stats.total)) : '-';
+  document.getElementById('statTopAvg').textContent   = users.length ? Math.max(...users.map(u=>u.stats.avg))   : '-';
+  document.getElementById('rankingTitle').innerHTML   = TITLES[curTab];
+
+  const sorted = [...users].sort((a,b) => curTab==='avg' ? b.stats.avg-a.stats.avg : b.stats.total-a.stats.total);
+  if (!sorted.length) {
+    document.getElementById('rankingList').innerHTML =
+      `<div class="empty"><div class="icon">🎌</div><p>まだデータがありません<br>尚無資料<br><br>メインアプリでニックネームを入力して練習しましょう！<br>請在主應用程式輸入暱稱後開始練習！</p></div>`;
+    return;
+  }
+  const maxVal = sorted[0].stats[curTab==='avg'?'avg':'total'] || 1;
+  const medals=['🥇','🥈','🥉'], rc=['gold','silver','bronze'], tc=['top1','top2','top3'];
+
+  document.getElementById('rankingList').innerHTML = sorted.map((u,i) => {
+    const val = curTab==='avg' ? u.stats.avg : u.stats.total;
+    const pct = Math.round(val/maxVal*100);
+    const lbl = curTab==='avg' ? '点（平均）<br>分（平均）' : '点（累計）<br>分（累計）';
+    const dayEntries = Object.entries(u.data.days||{})
+      .filter(([k,d]) => curFilter==='all'||d.level===curFilter)
+      .sort((a,b) => { const la=a[1].level+String(a[1].day).padStart(2,'0'); const lb=b[1].level+String(b[1].day).padStart(2,'0'); return la<lb?-1:1; });
+    const dayRows = dayEntries.map(([k,d]) =>
+      `<div class="day-row"><span class="day-title">${LV[d.level]||d.level} Day${d.day+1}「${esc(d.title||'')}」</span><span class="day-score">${d.best}点/分</span></div>`
+    ).join('');
+    return `<div class="rank-item ${i<3?tc[i]:''}">
+      <div class="rank-main">
+        <div class="rank-num ${i<3?rc[i]:''}">${i+1}</div>
+        <div class="rank-medal">${i<3?medals[i]:''}</div>
+        <div class="rank-info">
+          <div class="rank-name">${esc(u.nick)}</div>
+          <div class="rank-sub">${u.stats.count} DAY練習済み / 已練習 ${u.stats.count} 個DAY</div>
+        </div>
+        <div class="rank-score-wrap">
+          <div class="rank-score">${val}</div>
+          <div class="rank-score-label">${lbl}</div>
+        </div>
+      </div>
+      ${dayRows?`<div class="expand-wrap"><button class="expand-btn" onclick="toggleDetail(this)">▼ DAY別内訳を見る／查看各日明細</button><div class="day-detail">${dayRows}</div></div>`:''}
+      <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderDayRanking() {
+  document.getElementById('rankingTitle').innerHTML = TITLES.days;
+  const dayMap = {};
+  Object.values(allData).forEach(ud => {
+    const nick = ud.nick||'?';
+    Object.entries(ud.days||{}).forEach(([k,d]) => {
+      if (curFilter!=='all'&&d.level!==curFilter) return;
+      if (!dayMap[k]) dayMap[k]={title:d.title,level:d.level,day:d.day,entries:[]};
+      dayMap[k].entries.push({nick,best:d.best});
+    });
+  });
+  if (!Object.keys(dayMap).length) {
+    document.getElementById('rankingList').innerHTML='<div class="empty"><div class="icon">📅</div><p>まだデータがありません<br>尚無資料</p></div>';
+    return;
+  }
+  const sorted = Object.entries(dayMap).sort((a,b) => {
+    const la=a[1].level+String(a[1].day).padStart(2,'0');
+    const lb=b[1].level+String(b[1].day).padStart(2,'0');
+    return la<lb?-1:1;
+  });
+  const medals=['🥇','🥈','🥉'];
+  document.getElementById('rankingList').innerHTML = sorted.map(([k,d]) => {
+    const top=[...d.entries].sort((a,b)=>b.best-a.best).slice(0,3);
+    const topHtml=top.map((e,i)=>`<span style="font-size:.82rem;margin-right:12px">${medals[i]} ${esc(e.nick)} <b style="color:var(--gold)">${e.best}点/分</b></span>`).join('');
+    return `<div class="rank-item" style="padding:12px 14px">
+      <div style="font-size:.74rem;color:var(--tx2);margin-bottom:3px">${LV[d.level]||d.level} Day${d.day+1}</div>
+      <div style="font-weight:700;margin-bottom:8px;font-size:.9rem">「${esc(d.title||k)}」</div>
+      <div>${topHtml||'<span style="color:var(--tx2);font-size:.78rem">まだ挑戦者なし／尚無挑戰者</span>'}</div>
+    </div>`;
+  }).join('');
+}
+
+function switchTab(tab) {
+  curTab=tab;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['total','avg','days'][i]===tab));
+  render();
+}
+function setFilter(f) {
+  curFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',
+    (f==='all'&&b.textContent.includes('全'))||(f==='beg'&&b.textContent.includes('初'))||
+    (f==='int'&&b.textContent.includes('中'))||(f==='adv'&&b.textContent.includes('上'))
+  ));
+  render();
+}
+function toggleDetail(btn) {
+  const d=btn.nextElementSibling;
+  const open=d.classList.toggle('open');
+  btn.textContent=open?'▲ 閉じる／收起':'▼ DAY別内訳を見る／查看各日明細';
+}
+function setMsg(el, text, type) {
+  el.textContent=text;
+  el.className='msg ' + (type==='ok'?'msg-ok':'msg-err');
+  if (type==='ok') setTimeout(()=>{el.textContent='';},4000);
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+</script>
+</body>
+</html>
